@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Steam Voice Cloner</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--bg:#140a1c;--pn:#24142e;--cu:#c8782a;--br:#f0c050;--dk:#0a0510;--te:#2ee6ff;--mg:#ff3cac;--fg:#f6e9d0;--mu:#a08fb0}
+*{box-sizing:border-box}
+body{margin:0 auto;max-width:560px;padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(30px + env(safe-area-inset-bottom,0px));background:var(--bg) repeating-linear-gradient(0deg,#0003 0 2px,transparent 2px 4px);color:var(--fg);font:10px/1.8 "Press Start 2P",ui-monospace,monospace}
+h1{font-size:14px;margin:0 0 4px;color:var(--br);text-shadow:2px 2px 0 var(--mg),4px 4px 0 var(--dk)}
+h1+p{color:var(--te);font-size:8px;margin:0 0 10px}
+.box{border:4px solid var(--cu);background:var(--pn);box-shadow:0 4px 0 var(--dk);padding:10px;margin:10px 0}
+h3{margin:0 0 8px;font-size:10px;color:var(--te)}
+button,label.b{font:inherit;font-size:9px;color:var(--dk);background:var(--cu);border:3px solid var(--dk);box-shadow:0 4px 0 var(--dk),inset 0 3px 0 #ffffff55;padding:10px 8px;margin:4px 4px 6px 0;display:inline-block;touch-action:manipulation}
+button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--dk)}
+.s{background:var(--te)}.m{background:var(--mg);color:#fff}button:disabled{opacity:.4}
+input[type=file]{display:none}
+textarea,input[type=text],select{width:100%;font:inherit;font-size:10px;background:var(--dk);color:var(--br);border:3px solid var(--cu);padding:8px;margin:4px 0}
+textarea{height:110px;line-height:1.6}
+audio{width:100%;margin:6px 0}
+#st{font-size:8px;color:var(--mu);line-height:1.8;margin-top:8px;word-break:break-word}
+.ck{display:flex;gap:8px;align-items:flex-start;font-size:8px;color:var(--br);margin:8px 0}.ck input{width:22px;height:22px;flex:none}
+pre{white-space:pre-wrap;font-size:8px;color:var(--mu);max-height:220px;overflow:auto}
+a.dl{color:var(--dk);background:var(--te);padding:10px 8px;border:3px solid var(--dk);text-decoration:none;font-size:9px;display:none;margin-top:6px}
+</style></head><body>
+<h1>STEAM VOICE CLONER</h1><p>★ CLON DE VOZ · XTTS-V2 ★</p>
+
+<div class="box"><h3>1 · TU VOZ (6–30 s, sin ruido)</h3>
+<button id="mic" class="m">🎙 GRABAR</button>
+<label class="b s" for="fl">📂 SUBIR AUDIO</label><input id="fl" type="file" accept="audio/*">
+<audio id="ref" controls hidden></audio></div>
+
+<div class="box"><h3>2 · TEXTO Y IDIOMA</h3>
+<textarea id="tx" placeholder="Escribe lo que dirá tu voz clonada…"></textarea>
+<select id="lg"><option value="es">Español</option><option value="en">English</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="it">Italiano</option><option value="pt">Português</option></select></div>
+
+<div class="box"><h3>3 · GENERAR</h3>
+<label class="ck"><input type="checkbox" id="ok"><span>Es MI voz o tengo permiso de la persona. No la usaré para engañar ni suplantar a nadie.</span></label>
+<button id="go" class="m" disabled>▶ CLONAR VOZ</button>
+<audio id="out" controls hidden></audio><a id="dl" class="dl" download="voz-clonada.wav">💾 GUARDAR</a>
+<div id="st">Graba o sube tu voz y escribe el texto.</div></div>
+
+<div class="box"><h3>AJUSTES</h3>
+<input type="text" id="sp" value="hasanbasbunar/Voice-Cloning-XTTS-v2" aria-label="Space">
+<input type="text" id="ep" placeholder="Endpoint (opcional, si falla)" aria-label="Endpoint">
+<input type="text" id="tk" placeholder="Token de Hugging Face (opcional, más cuota)" aria-label="Token">
+<button id="api" class="s">VER API DEL SPACE</button><pre id="pre"></pre></div>
+
+<script>
+const $=i=>document.getElementById(i);
+let ref=null,mr=null,ch=[];
+const st=t=>$('st').textContent=t;
+$('ok').onchange=()=>$('go').disabled=!$('ok').checked;
+async function toWav(file){
+ const ac=new(window.AudioContext||window.webkitAudioContext)();
+ const buf=await ac.decodeAudioData(await file.arrayBuffer());
+ const sr=22050,len=Math.floor(Math.min(buf.duration,30)*sr);
+ const off=new OfflineAudioContext(1,len,sr),s=off.createBufferSource();s.buffer=buf;s.connect(off.destination);s.start();
+ const d=(await off.startRendering()).getChannelData(0),o=new DataView(new ArrayBuffer(44+len*2));
+ const w=(p,t)=>[...t].forEach((c,i)=>o.setUint8(p+i,c.charCodeAt(0)));
+ w(0,'RIFF');o.setUint32(4,36+len*2,true);w(8,'WAVEfmt ');o.setUint32(16,16,true);o.setUint16(20,1,true);o.setUint16(22,1,true);o.setUint32(24,sr,true);o.setUint32(28,sr*2,true);o.setUint16(32,2,true);o.setUint16(34,16,true);w(36,'data');o.setUint32(40,len*2,true);
+ for(let i=0;i<len;i++)o.setInt16(44+i*2,Math.max(-1,Math.min(1,d[i]))*32767,true);
+ ac.close();return new File([o.buffer],'voz.wav',{type:'audio/wav'});
+}
+async function setRef(f){
+ try{ref=await toWav(f);$('ref').src=URL.createObjectURL(ref);$('ref').hidden=false;st('✔ Voz lista. Ahora el texto.')}
+ catch(e){st('No pude leer ese audio. Prueba otro o graba de nuevo.')}
+}
+$('fl').onchange=e=>e.target.files[0]&&setRef(e.target.files[0]);
+$('mic').onclick=async()=>{
+ if(mr&&mr.state==='recording'){mr.stop();return}
+ try{
+  const s=await navigator.mediaDevices.getUserMedia({audio:true});ch=[];mr=new MediaRecorder(s);
+  mr.ondataavailable=e=>ch.push(e.data);
+  mr.onstop=()=>{s.getTracks().forEach(t=>t.stop());$('mic').textContent='🎙 GRABAR';setRef(new Blob(ch,{type:mr.mimeType}))};
+  mr.start();$('mic').textContent='⏹ PARAR';st('Grabando… habla claro 10–20 segundos.');
+ }catch(e){st('No hay permiso de micrófono.')}
+};
+async function connect(){
+ const {Client}=await import('https://cdn.jsdelivr.net/npm/@gradio/client@1/dist/index.min.js');
+ const tk=$('tk').value.trim();
+ const cl=await Client.connect($('sp').value.trim(),tk?{hf_token:tk}:{});
+ return {cl,info:await cl.view_api()};
+}
+const comp=p=>String(p.component||p.type?.type||'').toLowerCase(),lab=p=>String(p.label||p.parameter_name||'').toLowerCase();
+function pick(info){
+ const eps=info.named_endpoints||{},want=$('ep').value.trim();
+ if(want)return eps[want.startsWith('/')?want:'/'+want]?(want.startsWith('/')?want:'/'+want):null;
+ const ok=Object.entries(eps).filter(([n,e])=>e.parameters.some(p=>comp(p)==='audio')&&e.parameters.some(p=>comp(p)==='textbox'));
+ const best=ok.find(([n])=>/clone|tts|generate|synth|predict/i.test(n))||ok[0];
+ return best?best[0]:null;
+}
+function args(e,txt){
+ let used=false,lang=$('lg').value,names={es:'spanish',en:'english',fr:'french',de:'german',it:'italian',pt:'portuguese'};
+ return e.parameters.map(p=>{
+  const c=comp(p),l=lab(p);
+  if(c==='audio'){if(!used&&!/mic/.test(l)){used=true;return ref}return null}
+  if(c==='textbox'&&/text|prompt|input/.test(l)&&!/clean|prefix/.test(l)&&!p._t){p._t=1;return txt}
+  if(/lang/.test(l)){const en=p.type?.enum||p.python_type?.enum||[];return en.find(x=>String(x).toLowerCase()===lang||String(x).toLowerCase().includes(names[lang]))||lang}
+  if(c==='checkbox'&&/agree|accept|term|consent|licen/.test(l))return true;
+  return p.parameter_has_default?p.parameter_default:null;
+ });
+}
+$('go').onclick=async()=>{
+ const txt=$('tx').value.trim();
+ if(!ref)return st('Primero graba o sube tu voz.');
+ if(!txt)return st('Escribe el texto.');
+ $('go').disabled=true;$('out').hidden=true;$('dl').style.display='none';
+ try{
+  st('Conectando con el Space… si estaba dormido tarda 1–2 minutos.');
+  const {cl,info}=await connect(),ep=pick(info);
+  if(!ep)throw new Error('No encuentro el endpoint. Pulsa VER API DEL SPACE y escríbelo en Endpoint.');
+  st('Clonando voz… puede tardar un poco.');
+  const r=await cl.predict(ep,args(info.named_endpoints[ep],txt));
+  const f=(r.data||[]).find(x=>x&&(x.url||x.path)),u=f&&(f.url||f.path);
+  if(!u)throw new Error('El Space no devolvió audio.');
+  const b=await (await fetch(u)).blob(),url=URL.createObjectURL(b);
+  $('out').src=url;$('out').hidden=false;$('dl').href=url;$('dl').style.display='inline-block';st('✔ ¡Listo! Escúchalo y guárdalo.');
+ }catch(e){
+  const m=String(e&&e.message||e);
+  st('Error: '+m+(/quota|gpu|limit/i.test(m)?' · Pega un token gratis de Hugging Face en Ajustes.':' · Si el Space está caído, prueba otro en Ajustes.'));
+ }
+ $('go').disabled=!$('ok').checked;
+};
+$('api').onclick=async()=>{
+ try{$('pre').textContent='Cargando…';const {info}=await connect();
+  $('pre').textContent=Object.entries(info.named_endpoints||{}).map(([n,e])=>n+'\n'+e.parameters.map(p=>'  - '+(p.label||p.parameter_name)+' ['+comp(p)+']').join('\n')).join('\n\n');
+ }catch(e){$('pre').textContent='Error: '+(e.message||e)}
+};
+</script></body></html>
